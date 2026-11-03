@@ -1,0 +1,54 @@
+import os
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+load_dotenv()
+
+api_key = os.getenv("API_KEY")
+client = genai.Client(api_key=api_key)
+
+# 1. RAG IMPLEMENTATION: Load data from your data.text file
+try:
+    with open("data.text", "r") as file:
+        knowledge_data = file.read()
+except FileNotFoundError:
+    knowledge_data = "No external document provided."
+
+# 2. RTCCO IMPLEMENTATION: Set up system instructions
+system_instruction = f"""
+Role: You are an expert AI assistant.
+Task: Answer user questions accurately using the provided context.
+Context / Knowledge Base (RAG):
+{knowledge_data}
+
+Constraints:
+- Rely strictly on the provided knowledge base where applicable.
+- If the answer is not in the context, clearly state that you don't know based on the provided data.
+- Keep answers concise and direct.
+
+Output Format: Plain text responses without unnecessary filler.
+"""
+
+# Create chat session with RTCCO system instructions included
+chat = client.chats.create(
+    model="gemini-3.8-flash",
+    config=types.GenerateContentConfig(
+        system_instruction=system_instruction
+    )
+)
+
+print("Gemini chatbot Started (RTCCO & RAG Enabled)!")
+print("Type 'exit' to stop.\n")
+
+while True:
+    message = input("you: ")
+    if message.lower() == "exit":
+        print("Goodbye!")
+        break
+
+    try:
+        response = chat.send_message(message)
+        print(f"Gemini: {response.text}")
+    except Exception as error:
+        print("Error:", error)
